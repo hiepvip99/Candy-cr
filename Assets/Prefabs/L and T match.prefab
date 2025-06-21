@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3984599176223279531}
   - component: {fileID: 1840152752607894388}
-  - component: {fileID: 5189670850208906178}
   - component: {fileID: 4402226085493822443}
+  - component: {fileID: 5555133917527075111}
   m_Layer: 0
   m_Name: L and T match
   m_TagString: WrappedCandy
@@ -89,18 +89,6 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!114 &5189670850208906178
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4784952921646823440}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c210e7fe4513ad64796acaaf506364ba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!58 &4402226085493822443
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -137,3 +125,15 @@ CircleCollider2D:
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
   m_Radius: 0.5
+--- !u!114 &5555133917527075111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4784952921646823440}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45f9056e665c1a2469c7ad963fdbb36d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

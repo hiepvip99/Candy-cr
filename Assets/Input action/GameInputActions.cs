@@ -108,6 +108,15 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": true
+                },
+                {
+                    ""name"": ""DebugSpecialCandy"",
+                    ""type"": ""Button"",
+                    ""id"": ""a6c486fd-1a9b-4d0f-a058-e18047bf0602"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -154,6 +163,17 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""TouchPosition"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""e4e5807d-b16e-4a25-b302-dba040811302"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugSpecialCandy"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -164,6 +184,7 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
         m_Gameplay = asset.FindActionMap("Gameplay", throwIfNotFound: true);
         m_Gameplay_TouchPress = m_Gameplay.FindAction("TouchPress", throwIfNotFound: true);
         m_Gameplay_TouchPosition = m_Gameplay.FindAction("TouchPosition", throwIfNotFound: true);
+        m_Gameplay_DebugSpecialCandy = m_Gameplay.FindAction("DebugSpecialCandy", throwIfNotFound: true);
     }
 
     ~@GameInputActions()
@@ -246,6 +267,7 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
     private List<IGameplayActions> m_GameplayActionsCallbackInterfaces = new List<IGameplayActions>();
     private readonly InputAction m_Gameplay_TouchPress;
     private readonly InputAction m_Gameplay_TouchPosition;
+    private readonly InputAction m_Gameplay_DebugSpecialCandy;
     /// <summary>
     /// Provides access to input actions defined in input action map "Gameplay".
     /// </summary>
@@ -265,6 +287,10 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Gameplay/TouchPosition".
         /// </summary>
         public InputAction @TouchPosition => m_Wrapper.m_Gameplay_TouchPosition;
+        /// <summary>
+        /// Provides access to the underlying input action "Gameplay/DebugSpecialCandy".
+        /// </summary>
+        public InputAction @DebugSpecialCandy => m_Wrapper.m_Gameplay_DebugSpecialCandy;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -297,6 +323,9 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
             @TouchPosition.started += instance.OnTouchPosition;
             @TouchPosition.performed += instance.OnTouchPosition;
             @TouchPosition.canceled += instance.OnTouchPosition;
+            @DebugSpecialCandy.started += instance.OnDebugSpecialCandy;
+            @DebugSpecialCandy.performed += instance.OnDebugSpecialCandy;
+            @DebugSpecialCandy.canceled += instance.OnDebugSpecialCandy;
         }
 
         /// <summary>
@@ -314,6 +343,9 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
             @TouchPosition.started -= instance.OnTouchPosition;
             @TouchPosition.performed -= instance.OnTouchPosition;
             @TouchPosition.canceled -= instance.OnTouchPosition;
+            @DebugSpecialCandy.started -= instance.OnDebugSpecialCandy;
+            @DebugSpecialCandy.performed -= instance.OnDebugSpecialCandy;
+            @DebugSpecialCandy.canceled -= instance.OnDebugSpecialCandy;
         }
 
         /// <summary>
@@ -368,5 +400,12 @@ public partial class @GameInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnTouchPosition(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "DebugSpecialCandy" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnDebugSpecialCandy(InputAction.CallbackContext context);
     }
 }

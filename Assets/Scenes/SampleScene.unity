@@ -589,6 +589,55 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 80380034}
   m_CullTransparentMesh: 1
+--- !u!1 &93372637
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 93372639}
+  - component: {fileID: 93372638}
+  m_Layer: 0
+  m_Name: Debug
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &93372638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 93372637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 79a1add7ac2a9d643a245e411ca9520e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gameManager: {fileID: 1770383434}
+  board: {fileID: 1572854484}
+  fxManager: {fileID: 1256594914}
+  debugSpecialCandyType: 2
+  strippedCandyIsHorizontal: 1
+--- !u!4 &93372639
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 93372637}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 4.2251, y: 5.04261, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &110895168
 GameObject:
   m_ObjectHideFlags: 0
@@ -2328,7 +2377,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1065306384
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3051,8 +3100,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e219783d7d4706458d012099198e5f2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _width: 9
-  _height: 9
   candyPrefabs:
   - {fileID: 2071541939610781165, guid: c51ce902c9cdecf44bb33f099bdd14c9, type: 3}
   - {fileID: 2907709398385084282, guid: 8783a78ce5b8fae4ca17537191cddda4, type: 3}
@@ -3217,7 +3264,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1662203598
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3450,13 +3497,11 @@ MonoBehaviour:
   matchFinderInstance: {fileID: 407108192}
   fxManagerInstance: {fileID: 1256594914}
   scoreManagerInstance: {fileID: 2038837588}
-  boardWidth: 8
-  boardHeight: 8
+  boardWidth: 15
+  boardHeight: 15
   candyPrefabs:
   - {fileID: 2071541939610781165, guid: c51ce902c9cdecf44bb33f099bdd14c9, type: 3}
-  - {fileID: 2907709398385084282, guid: 8783a78ce5b8fae4ca17537191cddda4, type: 3}
   - {fileID: 476817625223908751, guid: c882a1cd366172241a314532cf4b7784, type: 3}
-  - {fileID: 2654093164739792668, guid: dc13c26be48e16040b8a9642eb8e3002, type: 3}
   - {fileID: 4081577608162705983, guid: 41810f2f7ef3bb44eab755a075a78187, type: 3}
   - {fileID: 8778960567354485610, guid: 19c82e0e7db7d034fb7c5e2980e88c67, type: 3}
   - {fileID: 7389531484259577512, guid: 1d0d0558c7a423b4fa1e3fff3220a95b, type: 3}
@@ -3740,7 +3785,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1872827597
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4506,3 +4551,4 @@ SceneRoots:
   - {fileID: 1572854485}
   - {fileID: 1872827600}
   - {fileID: 1188554171}
+  - {fileID: 93372639}

@@ -1,6 +1,7 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 public class Match3GameManager : MonoBehaviour
 {
@@ -23,9 +24,18 @@ public class Match3GameManager : MonoBehaviour
     public int boardHeight = 8;
     public GameObject[] candyPrefabs; // Các prefab kẹo
     public GameObject tilePrefab;     // Prefab ô gạch
-    public GameObject strippedCandyPrefab;
+    public GameObject strippedCandyPrefab;// mặc định là kẹo sọc dọc
     public GameObject wrappedCandyPrefab;
     public GameObject colorBombPrefab;
+
+    // Các biến nội bộ để quản lý trạng thái game
+    // Thay đổi kiểu của list này từ Vector2Int sang GameObject
+    private List<GameObject> _wrappedCandiesPendingSecondExplosion = new List<GameObject>();
+    private HashSet<GameObject> _allCandiesToDestroyThisTurn = new HashSet<GameObject>();
+    private Dictionary<Vector2Int, SpecialCandyCreationInfo> _specialCandiesToCreateThisTurn =
+        new Dictionary<Vector2Int, SpecialCandyCreationInfo>();
+    private HashSet<GameObject> _specialCandiesActivatedThisCascade = new HashSet<GameObject>();
+
 
     void Awake()
     {
@@ -64,8 +74,8 @@ public class Match3GameManager : MonoBehaviour
     /// </summary>
     public void RequestSwapCandies(int x1, int y1, int x2, int y2)
     {
-        if (IsProcessingBoard) return; // Nếu game đang bận, bỏ qua input
-        IsProcessingBoard = true; // Chặn input
+        if (IsProcessingBoard) return;
+        IsProcessingBoard = true;
 
         StartCoroutine(HandleSwapAndMatches(x1, y1, x2, y2));
     }
@@ -89,197 +99,416 @@ public class Match3GameManager : MonoBehaviour
         yield return _fxManager.AnimateSwap(candy1GO, candy2GO,
             _board.GetWorldPosition(x1, y1), _board.GetWorldPosition(x2, y2));
 
-        // Kiểm tra match sau khi hoán đổi
-        HashSet<GameObject> initialMatches = _matchFinder.FindAllMatches(_board.Candies, _board.Width, _board.Height);
-
-        if (initialMatches.Count > 0)
+        // Kiểm tra match sau khi hoán đổi, truyền vị trí kẹo đã hoán đổi
+        MatchResult matchResult = _matchFinder.FindAllMatches(_board.Candies, _board.Width, _board.Height, new Vector2Int(x2, y2)); // Vị trí cuối cùng của kẹo được chọn
+        //Debug.Log($"Match found SpecialCandiesToCreate: {matchResult.SpecialCandiesToCreate.Count} .");
+        if (matchResult.MatchedCandies.Count > 0)
         {
-            // Có match, bắt đầu chu trình phá hủy/đổ kẹo/lấp đầy
-            yield return StartCoroutine(ProcessBoardRoutine(initialMatches));
+            yield return StartCoroutine(ProcessBoardRoutine(matchResult));
         }
         else
         {
-            // Không có match, hoàn tác hoán đổi và animation trở lại
+            // Không có match, hoàn tác
             Debug.Log("No match found after swap, swapping back.");
-            _board.SwapCandiesData(x1, y1, x2, y2); // Hoán tác dữ liệu logic
+            _board.SwapCandiesData(x1, y1, x2, y2);
             yield return _fxManager.AnimateSwap(candy1GO, candy2GO,
-                _board.GetWorldPosition(x2, y2), _board.GetWorldPosition(x1, y1)); // Animation trở lại
+                _board.GetWorldPosition(x2, y2), _board.GetWorldPosition(x1, y1));
         }
 
-        IsProcessingBoard = false; // Mở lại input sau khi mọi thứ ổn định
+        IsProcessingBoard = false;
         Debug.Log("Board processing finished. Player input enabled.");
     }
-
-    ///// <summary>
-    ///// Coroutine xử lý chu trình phá hủy, đổ kẹo, lấp đầy và cascade (dây chuyền).
-    ///// </summary>
-    ///// <param name="currentMatches">Tập hợp các GameObject kẹo đã match.</param>
-    //private IEnumerator ProcessBoardRoutine(HashSet<GameObject> currentMatches)
-    //{
-    //    while (currentMatches.Count > 0)
-    //    {
-    //        // 1. Kích hoạt hiệu ứng và chờ animation phá hủy hoàn tất
-    //        yield return _fxManager.AnimateDestroyMatches(currentMatches);
-
-    //        // 2. Xóa kẹo đã match khỏi mảng logic của Board
-    //        _board.DestroyCandies(currentMatches);
-
-    //        // 3. Cộng điểm cho người chơi (giả sử mỗi kẹo match được 10 điểm)
-    //        _scoreManager.AddScore(currentMatches.Count * 10);
-    //        _fxManager.PlayMatchSound(); // Phát âm thanh match
-
-    //        // 4. Áp dụng trọng lực: kẹo rơi xuống để lấp đầy chỗ trống
-    //        List<Vector2Int> droppedPositions = _board.ApplyGravity();
-    //        yield return _fxManager.AnimateDropCandies(droppedPositions, _board);
-
-    //        // 5. Lấp đầy chỗ trống bằng kẹo mới từ trên cao
-    //        List<Vector2Int> newCandyPositions = _board.FillEmptySpots(candyPrefabs);
-    //        yield return _fxManager.AnimateNewCandiesDrop(newCandyPositions, _board);
-
-    //        // 6. Kiểm tra lại xem có match mới nào được tạo ra sau khi kẹo rơi và lấp đầy (cascade)
-    //        currentMatches = _matchFinder.FindAllMatches(_board.Candies, _board.Width, _board.Height);
-    //    }
-    //}
-
-    private IEnumerator ProcessBoardRoutine(HashSet<GameObject> currentMatches)
+    private IEnumerator ProcessBoardRoutine(MatchResult initialMatchResult)
     {
-        while (currentMatches.Count > 0)
+        IsProcessingBoard = true;
+
+        MatchResult currentMatchResult = initialMatchResult;
+
+        // Reset các danh sách cho mỗi chuỗi cascade mới
+        _allCandiesToDestroyThisTurn.Clear();
+        _specialCandiesToCreateThisTurn.Clear();
+        _wrappedCandiesPendingSecondExplosion.Clear();
+        _specialCandiesActivatedThisCascade.Clear(); // <-- RESET ĐÂY!
+
+        do // Vòng lặp chính để xử lý toàn bộ chuỗi cascade
         {
-            // 1. Xác định kẹo đặc biệt sẽ được tạo ra (trước khi phá hủy kẹo cũ)
-            // Lấy các vị trí mà tại đó match xảy ra
-            Dictionary<Vector2Int, SpecialCandyType> specialCandiesToCreate =
-                DetermineSpecialCandies(currentMatches, _board.Candies, _board.Width, _board.Height);
+            HashSet<GameObject> candiesToDestroyInCurrentStep = new HashSet<GameObject>();
+            Dictionary<Vector2Int, SpecialCandyCreationInfo> specialsToCreateInCurrentStep = new Dictionary<Vector2Int, SpecialCandyCreationInfo>();
 
-            // 2. Kích hoạt hiệu ứng và chờ animation phá hủy hoàn tất
-            yield return _fxManager.AnimateDestroyMatches(currentMatches);
-
-            // 3. Xóa kẹo đã match khỏi mảng logic của Board
-            _board.DestroyCandies(currentMatches);
-
-            // 4. Cộng điểm cho người chơi
-            _scoreManager.AddScore(currentMatches.Count * 10);
-            _fxManager.PlayMatchSound();
-
-            // 5. Tạo và đặt các kẹo đặc biệt vào bảng
-            yield return CreateSpecialCandies(specialCandiesToCreate);
-
-
-            // 6. Áp dụng trọng lực: kẹo rơi xuống để lấp đầy chỗ trống
-            List<Vector2Int> droppedPositions = _board.ApplyGravity();
-            yield return _fxManager.AnimateDropCandies(droppedPositions, _board);
-
-            // 7. Lấp đầy chỗ trống bằng kẹo mới từ trên cao
-            List<Vector2Int> newCandyPositions = _board.FillEmptySpots(candyPrefabs);
-            yield return _fxManager.AnimateNewCandiesDrop(newCandyPositions, _board);
-
-            // 8. Kiểm tra lại xem có match mới nào được tạo ra sau khi kẹo rơi và lấp đầy (cascade)
-            currentMatches = _matchFinder.FindAllMatches(_board.Candies, _board.Width, _board.Height);
-        }
-    }
-
-    /// <summary>
-    /// Xác định loại kẹo đặc biệt sẽ tạo và vị trí của chúng.
-    /// </summary>
-    /// <param name="matchedCandies">Tất cả các kẹo đã match trong lần này.</param>
-    /// <param name="currentBoardCandies">Bảng kẹo hiện tại (để kiểm tra lại các line).</param>
-    private Dictionary<Vector2Int, SpecialCandyType> DetermineSpecialCandies(
-        HashSet<GameObject> matchedCandies, GameObject[,] currentBoardCandies, int width, int height)
-    {
-        Dictionary<Vector2Int, SpecialCandyType> specialCandiesToCreate = new Dictionary<Vector2Int, SpecialCandyType>();
-
-        // Tìm giao điểm của các match (nơi kẹo đặc biệt có thể được tạo)
-        // Đây là cách đơn giản để tìm vị trí kẹo đặc biệt.
-        // Có thể cần logic phức tạp hơn để chọn vị trí ưu tiên nếu có nhiều giao điểm.
-        foreach (GameObject matchedCandy in matchedCandies)
-        {
-            Candy candyScript = matchedCandy.GetComponent<Candy>();
-            if (candyScript == null) continue;
-
-            int x = candyScript.X;
-            int y = candyScript.Y;
-            string tag = matchedCandy.tag;
-
-            // Hỏi MatchFinder xem vị trí này có tạo thành kẹo đặc biệt không
-            SpecialCandyType type = _matchFinder.GetSpecialCandyType(currentBoardCandies, x, y, tag);
-
-            // Nếu vị trí này tạo ra một kẹo đặc biệt, thêm vào danh sách
-            if (type != SpecialCandyType.None && !specialCandiesToCreate.ContainsKey(new Vector2Int(x, y)))
+            if (currentMatchResult.MatchedCandies.Count > 0)
             {
-                // Nếu có nhiều loại match tại 1 vị trí (ví dụ: match 5 vừa là L/T),
-                // cần ưu tiên loại kẹo đặc biệt cao cấp hơn (ColorBomb > Wrapped > Stripped)
-                SpecialCandyType existingType;
-                if (specialCandiesToCreate.TryGetValue(new Vector2Int(x, y), out existingType))
+                specialsToCreateInCurrentStep = new Dictionary<Vector2Int, SpecialCandyCreationInfo>(currentMatchResult.SpecialCandiesToCreate);
+
+                // --- PHẦN SỬA ĐỔI CHÍNH Ở ĐÂY ---
+                // HandleMatchedSpecialCandyActivations sẽ kích hoạt các kẹo đặc biệt và thêm chúng vào _specialCandiesActivatedThisCascade
+                yield return HandleMatchedSpecialCandyActivations(currentMatchResult.MatchedCandies);
+
+                // Lọc các kẹo đặc biệt đã được kích hoạt khỏi danh sách MatchResult.MatchedCandies
+                // để chúng không bị phá hủy ngay lập tức bởi match đó.
+                foreach (GameObject matchedCandy in currentMatchResult.MatchedCandies)
                 {
-                    if (type > existingType) // Ưu tiên loại cao cấp hơn
+                    if (!_specialCandiesActivatedThisCascade.Contains(matchedCandy))
                     {
-                        specialCandiesToCreate[new Vector2Int(x, y)] = type;
+                        candiesToDestroyInCurrentStep.Add(matchedCandy);
+                    }
+                    else
+                    {
+                        // Debug.Log($"Skipping destruction of activated special candy: {matchedCandy.name}");
                     }
                 }
-                else
+
+                // Các kẹo bị phá hủy bởi special candy (thu thập qua event) vẫn được thêm vào
+                //candiesToDestroyInCurrentStep.UnionWith(_allCandiesToDestroyThisTurn);
+                //_allCandiesToDestroyThisTurn.Clear();
+
+                // --- THAY ĐỔI QUAN TRỌNG: LỌC _allCandiesToDestroyThisTurn ---
+                // Chỉ thêm vào danh sách phá hủy những kẹo KHÔNG phải là Wrapped Candy đang chờ nổ lần 2.
+                // Các Wrapped Candy đã được thêm vào _wrappedCandiesPendingSecondExplosion sẽ được xử lý riêng.
+                foreach (GameObject candy in _allCandiesToDestroyThisTurn)
                 {
-                    specialCandiesToCreate.Add(new Vector2Int(x, y), type);
+                    if (candy != null && !_wrappedCandiesPendingSecondExplosion.Contains(candy))
+                    {
+                        candiesToDestroyInCurrentStep.Add(candy);
+                    }
+                    else
+                    {
+                        // Debug.Log($"Skipping destruction of a Wrapped Candy in _allCandiesToDestroyThisTurn because it's pending second explosion: {candy.name}");
+                    }
+                }
+                _allCandiesToDestroyThisTurn.Clear();
+            }
+            //else if (_wrappedCandiesPendingSecondExplosion.Count > 0)
+            //{
+            //    List<Vector2Int> currentSecondExplosions = new List<Vector2Int>(_wrappedCandiesPendingSecondExplosion);
+            //    _wrappedCandiesPendingSecondExplosion.Clear();
+
+            //    foreach (Vector2Int pos in currentSecondExplosions)
+            //    {
+            //        Debug.Log($"Activating Wrapped Candy - Second Explosion at ({pos.x},{pos.y}).");
+            //        // Ở đây, WrappedCandy.GetSecondExplosionAffectedCandies sẽ trả về cả viên kẹo bọc tại vị trí đó
+            //        // nếu nó vẫn còn (mà giờ nó sẽ còn)
+            //        HashSet<GameObject> secondExplosionCandies = WrappedCandy.GetSecondExplosionAffectedCandies(pos, _board);
+            //        candiesToDestroyInCurrentStep.UnionWith(secondExplosionCandies);
+            //    }
+            //}
+            // ELSE IF NÀY ĐƯỢC CHỈNH SỬA
+            else if (_wrappedCandiesPendingSecondExplosion.Count > 0)
+            {
+                // Lấy danh sách các GameObject của Wrapped Candy chờ nổ lần 2
+                List<GameObject> currentSecondExplosionCandies = new List<GameObject>(_wrappedCandiesPendingSecondExplosion);
+                _wrappedCandiesPendingSecondExplosion.Clear();
+
+                foreach (GameObject wrappedCandyGo in currentSecondExplosionCandies)
+                {
+                    // Đảm bảo viên kẹo vẫn còn tồn tại và là kẹo bọc
+                    if (wrappedCandyGo != null && wrappedCandyGo.GetComponent<WrappedCandy>() != null)
+                    {
+                        // Gọi GetSecondExplosionAffectedCandies với chính GameObject của kẹo bọc
+                        HashSet<GameObject> secondExplosionCandies = WrappedCandy.GetSecondExplosionAffectedCandies(wrappedCandyGo, _board);
+                        candiesToDestroyInCurrentStep.UnionWith(secondExplosionCandies);
+                        // KHÔNG CẦN THÊM wrappedCandyGo VÀO ĐÂY NỮA, VÌ GETSECONDEFFECTEDCANDIES ĐÃ TỰ THÊM NÓ.
+                        // Debug.Log($"Activating Wrapped Candy - Second Explosion at ACTUAL position ({wrappedCandyGo.GetComponent<Candy>().X},{wrappedCandyGo.GetComponent<Candy>().Y}).");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Wrapped Candy for second explosion was null or not a Wrapped Candy.");
+                    }
                 }
             }
-        }
-        return specialCandiesToCreate;
+            else
+            {
+                Debug.Log("ProcessBoardRoutine finished: No more matches or pending actions.");
+                break;
+            }
+
+            // --- Thực hiện Phá hủy, Tạo kẹo, Trọng lực, Lấp đầy ---
+            // Phần này không đổi, nhưng giờ candiesToDestroyInCurrentStep đã được lọc đúng.
+            if (candiesToDestroyInCurrentStep.Count > 0)
+            {
+                yield return _fxManager.AnimateDestroyMatches(candiesToDestroyInCurrentStep);
+                _board.DestroyCandies(candiesToDestroyInCurrentStep);
+            }
+
+            if (specialsToCreateInCurrentStep.Count > 0)
+            {
+                yield return CreateSpecialCandies(specialsToCreateInCurrentStep);
+            }
+
+            List<Vector2Int> droppedPositions = _board.ApplyGravity();
+            if (droppedPositions.Count > 0)
+            {
+                yield return _fxManager.AnimateDropCandies(droppedPositions, _board);
+            }
+
+            List<Vector2Int> newCandyPositions = _board.FillEmptySpots(candyPrefabs);
+            if (newCandyPositions.Count > 0)
+            {
+                yield return _fxManager.AnimateNewCandiesDrop(newCandyPositions, _board);
+            }
+
+            HashSet<Vector2Int> newlyAffectedPositions = new HashSet<Vector2Int>();
+            foreach (var pos in droppedPositions) newlyAffectedPositions.Add(pos);
+            foreach (var pos in newCandyPositions) newlyAffectedPositions.Add(pos);
+
+            currentMatchResult = _matchFinder.FindAllMatches(
+                _board.Candies, _board.Width, _board.Height,
+                swappedCandyPosition: null,
+                newlyAffectedPositions: newlyAffectedPositions
+            );
+
+        } while (currentMatchResult.MatchedCandies.Count > 0 || _wrappedCandiesPendingSecondExplosion.Count > 0);
+
+        IsProcessingBoard = false;
     }
 
     /// <summary>
     /// Tạo các kẹo đặc biệt đã xác định và đặt chúng vào Board.
     /// </summary>
-    private IEnumerator CreateSpecialCandies(Dictionary<Vector2Int, SpecialCandyType> specialCandiesToCreate)
+    //private IEnumerator CreateSpecialCandies(Dictionary<Vector2Int, SpecialCandyCreationInfo> specialCandiesToCreate)
+    //{
+    //    float angle = 0;
+
+    //    foreach (var entry in specialCandiesToCreate)
+    //    {
+    //        Vector2Int pos = entry.Key;
+    //        SpecialCandyCreationInfo creationInfo = entry.Value; // Lấy ra struct info
+
+    //        GameObject specialCandyPrefabToUse = null;
+    //        //string newTag = "";
+
+    //        switch (creationInfo.Type) // Dùng creationInfo.Type
+    //        {
+    //            case SpecialCandyType.StrippedCandy:
+    //                // Chọn prefab kẹo sọc dựa trên hướng
+    //                specialCandyPrefabToUse = strippedCandyPrefab;
+    //                angle = creationInfo.IsHorizontalStripped ? 0f : 90f; // Giả sử bạn có biến creationInfo.IsHorizontalStripped để xác định hướng
+    //                //specialCandyPrefabToUse = creationInfo.IsHorizontalStripped ? /*horizontalStrippedCandyPrefab*/  :/* verticalStrippedCandyPrefab;*/
+    //                //newTag = "StrippedCandy"; // Tag vẫn là "StrippedCandy" cho cả hai loại hướng
+    //                break;
+    //            case SpecialCandyType.WrappedCandy:
+    //                specialCandyPrefabToUse = wrappedCandyPrefab;
+    //                //newTag = "WrappedCandy";
+    //                break;
+    //            case SpecialCandyType.ColorBomb:
+    //                specialCandyPrefabToUse = colorBombPrefab;
+    //                //newTag = "ColorBomb";
+    //                break;
+    //            case SpecialCandyType.None:
+    //                continue;
+    //        }
+
+    //        if (specialCandyPrefabToUse != null)
+    //        {
+    //            if (_board.GetCandy(pos.x, pos.y) == null)
+    //            {
+    //                Vector2 worldPos = _board.GetWorldPosition(pos.x, pos.y);
+    //                GameObject newSpecialCandy = Instantiate(specialCandyPrefabToUse, worldPos, angle == 0 ? Quaternion.identity : Quaternion.Euler(0f, angle, 0f));
+    //                newSpecialCandy.GetComponent<Candy>()?.UpdatePosition(pos.x, pos.y);
+    //                newSpecialCandy.transform.parent = boardInstance.transform;
+
+    //                //newSpecialCandy.tag = newTag;
+
+    //                _board.SetCandy(pos.x, pos.y, newSpecialCandy);
+
+    //                // Gán thông tin hướng vào Candy script nếu cần (ví dụ: StrippedCandy.cs)
+    //                StrippedCandy strippedCandyScript = newSpecialCandy.GetComponent<StrippedCandy>();
+    //                if (strippedCandyScript != null)
+    //                {
+    //                    strippedCandyScript.SetDirection(creationInfo.IsHorizontalStripped);
+    //                }
+    //                StrippedCandy strippedCandyScript = newSpecialCandy.GetComponent<StrippedCandy>();
+    //                if (strippedCandyScript != null)
+    //                {
+    //                    strippedCandyScript.SetDirection(creationInfo.IsHorizontalStripped);
+    //                }
+    //            }
+    //        }
+    //        else
+    //        {
+    //            Debug.LogWarning($"Missing prefab for special candy type: {creationInfo.Type} (Horizontal: {creationInfo.IsHorizontalStripped})");
+    //        }
+    //    }
+    //    yield return null;
+    //}
+
+    private IEnumerator CreateSpecialCandies(Dictionary<Vector2Int, SpecialCandyCreationInfo> specialCandiesToCreate)
     {
+        float angle = 0f; // Biến góc để xoay kẹo đặc biệt nếu cần
         foreach (var entry in specialCandiesToCreate)
         {
             Vector2Int pos = entry.Key;
-            SpecialCandyType type = entry.Value;
+            SpecialCandyCreationInfo creationInfo = entry.Value;
 
             GameObject specialCandyPrefabToUse = null;
-            string newTag = ""; // Tag của kẹo đặc biệt sẽ khác với kẹo thường
+            string newCandyGameObjectTag = ""; // Đây sẽ là tag được gán cho GameObject của kẹo đặc biệt mới
 
-            switch (type)
+            switch (creationInfo.Type)
             {
                 case SpecialCandyType.StrippedCandy:
                     specialCandyPrefabToUse = strippedCandyPrefab;
-                    newTag = "StrippedCandy"; // Ví dụ tag
+                    angle = creationInfo.IsHorizontalStripped ? 0f : 90f;
+                    newCandyGameObjectTag = creationInfo.BaseCandyTag; // Sử dụng tag gốc đã lưu
                     break;
                 case SpecialCandyType.WrappedCandy:
                     specialCandyPrefabToUse = wrappedCandyPrefab;
-                    newTag = "WrappedCandy"; // Ví dụ tag
+                    newCandyGameObjectTag = creationInfo.BaseCandyTag; // Sử dụng tag gốc đã lưu
                     break;
                 case SpecialCandyType.ColorBomb:
                     specialCandyPrefabToUse = colorBombPrefab;
-                    newTag = "ColorBomb"; // Ví dụ tag
+                    // Bom màu luôn có tag "ColorBomb" riêng, không phụ thuộc màu gốc
+                    newCandyGameObjectTag = "ColorBomb";
                     break;
                 case SpecialCandyType.None:
-                    continue; // Bỏ qua
+                    continue;
             }
 
             if (specialCandyPrefabToUse != null)
             {
-                // Đảm bảo vị trí này đang trống (do kẹo cũ đã bị phá hủy)
-                if (_board.GetCandy(pos.x, pos.y) == null)
+                // Đảm bảo vị trí pos đã trống do kẹo cũ đã bị phá hủy
+                // (Sau khi _board.DestroyCandies(currentMatchResult.MatchedCandies) được gọi)
+                // Hoặc nếu HandleSpecialCandyActivations đã xử lý nó
+                if (_board.GetCandy(pos.x, pos.y) != null) // Kẹo đặc biệt sinh ra KHÔNG ĐƯỢC bị đè lên kẹo cũ chưa phá hủy
                 {
-                    Vector2 worldPos = _board.GetWorldPosition(pos.x, pos.y);
-                    GameObject newSpecialCandy = Instantiate(specialCandyPrefabToUse, worldPos, Quaternion.identity);
-                    newSpecialCandy.transform.parent = boardInstance.transform; // Đặt làm con của _board
+                    Debug.LogWarning($"Attempting to create special candy at {pos} but it's not empty! Current candy: {_board.GetCandy(pos.x, pos.y).name}");
+                    // Cần xử lý lỗi hoặc bỏ qua, tùy thuộc vào game design của bạn.
+                    continue; // Tạm thời bỏ qua để tránh lỗi runtime
+                }
 
-                    // Cập nhật tag của GameObject cho kẹo đặc biệt
-                    newSpecialCandy.tag = newTag;
+                Vector2 worldPos = _board.GetWorldPosition(pos.x, pos.y);
+                //GameObject newSpecialCandy = Instantiate(specialCandyPrefabToUse, worldPos, Quaternion.identity);
+                GameObject newSpecialCandy = Instantiate(specialCandyPrefabToUse, worldPos, angle == 0 ? Quaternion.identity : Quaternion.Euler(0f, 0f, angle));
+                newSpecialCandy.transform.parent = boardInstance.transform;
 
-                    _board.SetCandy(pos.x, pos.y, newSpecialCandy); // Đặt kẹo đặc biệt vào board logic
-                    newSpecialCandy.GetComponent<Candy>()?.Init(pos.x, pos.y); // Khởi tạo script Candy
+                if (newSpecialCandy == null) Debug.LogWarning($"Lỗi chưa tạo ra kẹo mới tại vị trí: {worldPos}");
 
-                    // Có thể thêm hiệu ứng/animation khi kẹo đặc biệt xuất hiện
-                    // yield return _fxManager.AnimateSpecialCandySpawn(newSpecialCandy); // Ví dụ
+                // GÁN TAG CHO GAME OBJECT CỦA KẸO ĐẶC BIỆT MỚI TẠO
+                newSpecialCandy.tag = newCandyGameObjectTag;
+
+                _board.SetCandy(pos.x, pos.y, newSpecialCandy);
+                newSpecialCandy.GetComponent<Candy>()?.Init(pos.x, pos.y);
+
+                StrippedCandy strippedCandyScript = newSpecialCandy.GetComponent<StrippedCandy>();
+                if (strippedCandyScript != null)
+                {
+                    strippedCandyScript.SetDirection(creationInfo.IsHorizontalStripped);
                 }
             }
             else
             {
-                Debug.LogWarning($"Missing prefab for special candy type: {type}");
+                Debug.LogWarning($"Missing prefab for special candy type: {creationInfo.Type}");
             }
         }
-        yield return null; // Chờ 1 frame để đảm bảo mọi thứ được cập nhật
+        yield return null;
+    }
+
+
+
+
+    private void OnEnable()
+    {
+        GameEvents.OnSpecialCandyActivated += HandleSpecialCandyActivationEvent;
+        GameEvents.OnWrappedCandySecondExplosionNeeded += AddWrappedCandyForSecondExplosion;
+    }
+
+    private void OnDisable()
+    {
+        GameEvents.OnSpecialCandyActivated -= HandleSpecialCandyActivationEvent;
+        GameEvents.OnWrappedCandySecondExplosionNeeded -= AddWrappedCandyForSecondExplosion;
+    }
+
+    // Hàm xử lý khi một kẹo đặc biệt thông báo đã kích hoạt
+    private void HandleSpecialCandyActivationEvent(Vector2Int position, SpecialCandyType type, HashSet<GameObject> affectedCandies, string targetTag)
+    {
+        // Thêm tất cả kẹo bị ảnh hưởng vào danh sách chung để phá hủy trong lượt này
+        _allCandiesToDestroyThisTurn.UnionWith(affectedCandies);
+
+        // Logic để thêm vào specialCandiesToCreateThisTurn đã được MatchFinder xử lý rồi
+        // Nên ở đây chúng ta không cần thêm lại.
+        // MatchFinder đã điền _specialCandiesToCreateThisTurn vào initialMatchResult.SpecialCandiesToCreate
+        // và chúng ta đã lấy nó ở đầu ProcessBoardRoutine.
+    }
+
+    // Hàm thêm Wrapped Candy vào danh sách chờ nổ lần 2
+    // Cập nhật hàm lắng nghe event để chấp nhận GameObject
+    private void AddWrappedCandyForSecondExplosion(GameObject wrappedCandyGo)
+    {
+        if (wrappedCandyGo != null && !_wrappedCandiesPendingSecondExplosion.Contains(wrappedCandyGo))
+        {
+            _wrappedCandiesPendingSecondExplosion.Add(wrappedCandyGo);
+        }
+    }
+
+    /// <summary>
+    /// Duyệt qua các kẹo đã match và kích hoạt các kẹo đặc biệt nếu có.
+    /// Kẹo đặc biệt sẽ tự report các kẹo nó phá hủy qua GameEvents.OnSpecialCandyActivated.
+    /// </summary>
+// Cập nhật HandleMatchedSpecialCandyActivations để theo dõi các kẹo đặc biệt đã được kích hoạt
+    private IEnumerator HandleMatchedSpecialCandyActivations(HashSet<GameObject> matchedCandies)
+    {
+        List<Coroutine> activationCoroutines = new List<Coroutine>();
+        HashSet<GameObject> processedSpecialCandies = new HashSet<GameObject>(); // Để tránh xử lý trùng lặp trong hàm này
+
+        // Xóa bất kỳ kẹo đặc biệt cũ nào khỏi danh sách theo dõi của cascade này (nếu đã dùng lại)
+        // _specialCandiesActivatedThisCascade.Clear(); // Đã clear ở đầu ProcessBoardRoutine
+
+        foreach (GameObject candyGO in matchedCandies)
+        {
+            if (candyGO == null || processedSpecialCandies.Contains(candyGO)) continue;
+
+            ISpecialCandy specialCandyScript = candyGO.GetComponent<ISpecialCandy>();
+            Candy regularCandyScript = candyGO.GetComponent<Candy>(); // Để lấy BaseColorTag cho ColorBomb
+
+            if (specialCandyScript != null)
+            {
+                string targetTagForColorBomb = null;
+                if (specialCandyScript.SpecialType == SpecialCandyType.ColorBomb)
+                {
+                    // Tìm một kẹo thường trong danh sách match để làm targetTag cho Color Bomb
+                    foreach (GameObject otherCandyGO in matchedCandies)
+                    {
+                        if (otherCandyGO != candyGO && otherCandyGO != null)
+                        {
+                            Candy otherCandy = otherCandyGO.GetComponent<Candy>();
+                            if (otherCandy != null && otherCandy.GetComponent<ISpecialCandy>() == null) // Là kẹo thường
+                            {
+                                targetTagForColorBomb = otherCandy.tag;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                activationCoroutines.Add(StartCoroutine(specialCandyScript.Activate(
+                    _board, _fxManager, targetTagForColorBomb
+                )));
+                processedSpecialCandies.Add(candyGO); // Đánh dấu đã xử lý trong hàm này
+                _specialCandiesActivatedThisCascade.Add(candyGO); // <-- THÊM VÀO ĐÂY!
+            }
+        }
+
+        foreach (Coroutine co in activationCoroutines)
+        {
+            yield return co;
+        }
+    }
+    /// <summary>
+    /// Dành cho debug kẹo đặc biệt, kiểm tra các logic đã hoạt động đúng chưa.
+    /// Hàm này cho phép bên ngoài yêu cầu GameManager bắt đầu/tiếp tục quá trình xử lý bảng
+    /// </summary> 
+    public void ForceProcessBoard()
+    {
+        if (!IsProcessingBoard)
+        {
+            Debug.Log("ForceProcessBoard: Starting new ProcessBoardRoutine.");
+            // Bắt đầu với một MatchResult rỗng. ProcessBoardRoutine sẽ kiểm tra
+            // _allCandiesToDestroyThisTurn và _wrappedCandiesPendingSecondExplosion
+            // để biết có gì cần xử lý không.
+            StartCoroutine(ProcessBoardRoutine(new MatchResult()));
+        }
+        else
+        {
+            Debug.Log("ForceProcessBoard: Board is already processing.");
+        }
     }
 }
 

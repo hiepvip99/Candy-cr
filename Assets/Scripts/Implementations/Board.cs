@@ -3,8 +3,8 @@ using UnityEngine;
 
 public class Board : MonoBehaviour, IBoard
 {
-    [SerializeField]private int _width = 8;
-    [SerializeField]private int _height = 8;
+    private int _width;
+    private int _height;
     public GameObject[] candyPrefabs;
     public GameObject tilePrefab;
     public float candySize = 1.0f;
@@ -91,9 +91,6 @@ public class Board : MonoBehaviour, IBoard
             }
         }
     }
-
-
-
 
     public List<Vector2Int> ApplyGravity()
     {
@@ -188,11 +185,6 @@ public class Board : MonoBehaviour, IBoard
     {
         return new Vector2(x * candySize, y * candySize);
     }
-
-    //public void Initialize(int width, int height, GameObject[] candyPrefabs, GameObject tilePerfab)
-    //{
-    //    throw new System.NotImplementedException();
-    //}
 
     public void SetCandy(int x, int y, GameObject candy)
     {
