@@ -621,7 +621,7 @@ MonoBehaviour:
   gameManager: {fileID: 1770383434}
   board: {fileID: 1572854484}
   fxManager: {fileID: 1256594914}
-  debugSpecialCandyType: 2
+  debugSpecialCandyType: 3
   strippedCandyIsHorizontal: 1
 --- !u!4 &93372639
 Transform:
