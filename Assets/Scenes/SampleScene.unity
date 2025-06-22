@@ -3497,8 +3497,8 @@ MonoBehaviour:
   matchFinderInstance: {fileID: 407108192}
   fxManagerInstance: {fileID: 1256594914}
   scoreManagerInstance: {fileID: 2038837588}
-  boardWidth: 15
-  boardHeight: 15
+  boardWidth: 6
+  boardHeight: 6
   candyPrefabs:
   - {fileID: 2071541939610781165, guid: c51ce902c9cdecf44bb33f099bdd14c9, type: 3}
   - {fileID: 476817625223908751, guid: c882a1cd366172241a314532cf4b7784, type: 3}
@@ -3506,6 +3506,8 @@ MonoBehaviour:
   - {fileID: 8778960567354485610, guid: 19c82e0e7db7d034fb7c5e2980e88c67, type: 3}
   - {fileID: 7389531484259577512, guid: 1d0d0558c7a423b4fa1e3fff3220a95b, type: 3}
   - {fileID: 4784952921646823440, guid: cfa016c56c9820749bbae6affd58a90a, type: 3}
+  - {fileID: 2907709398385084282, guid: 8783a78ce5b8fae4ca17537191cddda4, type: 3}
+  - {fileID: 2654093164739792668, guid: dc13c26be48e16040b8a9642eb8e3002, type: 3}
   tilePrefab: {fileID: 2168269952244067666, guid: dd24a23ad0648f2429eb358515177f63, type: 3}
   strippedCandyPrefab: {fileID: 4784952921646823440, guid: 462f78d60ee7699459f4c2adf1313bc0, type: 3}
   wrappedCandyPrefab: {fileID: 4784952921646823440, guid: 0978206cd031eb2448783bfe46f80f41, type: 3}
