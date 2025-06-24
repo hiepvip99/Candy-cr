@@ -118,6 +118,7 @@ public class Match3GameManager : MonoBehaviour
 
             ISpecialCandy otherSpecialCandy = otherCandyGO.GetComponent<ISpecialCandy>();
             Candy otherRegularCandy = otherCandyGO.GetComponent<Candy>();
+            //Colorbomb + Colorbomb
             if (otherSpecialCandy != null && otherSpecialCandy.SpecialType == SpecialCandyType.ColorBomb)
             {
                 Debug.Log("Color Bomb + Color Bomb: Clearing entire board!");
@@ -146,31 +147,6 @@ public class Match3GameManager : MonoBehaviour
                 // trong lượt này và chỉ tập trung vào việc xóa bảng.
                 // Việc truyền MatchResult rỗng (new MatchResult()) là hợp lý.
             }
-            //// Color Bomb + Color Bomb
-            //if (otherSpecialCandy != null && otherSpecialCandy.SpecialType == SpecialCandyType.ColorBomb)
-            //{
-            //    Debug.Log("Color Bomb + Color Bomb: Clearing entire board!");
-
-            //    // --- THAY ĐỔI Ở ĐÂY: XÓA SẠCH _allCandiesToDestroyThisTurn và thêm tất cả kẹo vào ---
-            //    _allCandiesToDestroyThisTurn.Clear(); // Đảm bảo danh sách trống rỗng
-            //    for (int x = 0; x < _board.Width; x++)
-            //    {
-            //        for (int y = 0; y < _board.Height; y++)
-            //        {
-            //            GameObject candy = _board.GetCandy(x, y);
-            //            if (candy != null)
-            //            {
-            //                _allCandiesToDestroyThisTurn.Add(candy);
-            //            }
-            //        }
-            //    }
-
-            //    Debug.Log($"Total candies to destroy: {_allCandiesToDestroyThisTurn.Count}");
-            //    // Không cần thêm colorBombGO và otherCandyGO riêng nữa vì chúng đã nằm trong _board.Candies
-
-            //    //matchResult = new MatchResult(); // Vẫn cần MatchResult rỗng để ProcessBoardRoutine chạy
-            //    //                                 // và có thể chứa các kẹo đặc biệt đã kích hoạt nếu cần.
-            //}
             // Color Bomb + Stripped Candy hoặc Wrapped Candy
             else if (otherSpecialCandy != null &&
                      (otherSpecialCandy.SpecialType == SpecialCandyType.StrippedCandy ||
@@ -210,11 +186,12 @@ public class Match3GameManager : MonoBehaviour
                 {
                     matchResult.MatchedCandies.Add(newSpecialCandy);
                 }
-            }// Color Bomb + Kẹo thường
+            }
+            // Color Bomb + Kẹo thường
             else if (otherRegularCandy != null)
             {
                 Debug.Log($"Color Bomb + Regular Candy ({otherRegularCandy.tag}): Clearing all {otherRegularCandy.tag} candies.");
-                matchResult = new MatchResult();
+                //matchResult = new MatchResult();
                 matchResult.MatchedCandies.Add(colorBombGO);
                 matchResult.MatchedCandies.Add(otherCandyGO); // Kẹo thường cũng được coi là match để kích hoạt ColorBomb
 
@@ -299,6 +276,7 @@ public class Match3GameManager : MonoBehaviour
                     stripped.tag = originalColorTag;
                     newSpecialCandyScript = stripped;
                 }
+                else { Debug.LogWarning("StrippedCandy component not found on the new special candy prefab!"); }
             }
             else if (typeToTransformInto == SpecialCandyType.WrappedCandy)
             {
@@ -309,6 +287,7 @@ public class Match3GameManager : MonoBehaviour
                     wrapped.tag = originalColorTag;
                     newSpecialCandyScript = wrapped;
                 }
+                else { Debug.LogWarning("WrappedCandy component not found on the new special candy prefab!"); }
             }
 
             if (newSpecialCandyGO != null)
@@ -405,6 +384,7 @@ public class Match3GameManager : MonoBehaviour
                         // Lấy các kẹo bị ảnh hưởng bởi vụ nổ lần hai của kẹo bọc
                         HashSet<GameObject> secondExplosionCandies = WrappedCandy.GetSecondExplosionAffectedCandies(wrappedCandyGo, _board);
                         candiesToDestroyInCurrentStep.UnionWith(secondExplosionCandies);
+                        
                         // Debug.Log($"[ProcessBoardRoutine] Activating Wrapped Candy - Second Explosion at ({wrappedCandyGo.GetComponent<Candy>().X},{wrappedCandyGo.GetComponent<Candy>().Y}).");
                     }
                     else
