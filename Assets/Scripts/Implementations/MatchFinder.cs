@@ -318,7 +318,7 @@ public class MatchFinder : MonoBehaviour, IMatchFinder
                 bool isHorizontalStripped = line.IsHorizontal;
                 // Lấy tag của viên kẹo tại vị trí sinh
                 string baseTag = currentCandies[spawnPos.x, spawnPos.y]?.tag ?? "DefaultCandyTag"; // Fallback
-                proposedSpecialCandies[spawnPos] = new SpecialCandyCreationInfo(SpecialCandyType.StrippedCandy, baseTag, isHorizontalStripped);
+                proposedSpecialCandies[spawnPos] = new SpecialCandyCreationInfo(SpecialCandyType.StripedCandy, baseTag, isHorizontalStripped);
             }
         }
 
@@ -395,7 +395,7 @@ public class MatchFinder : MonoBehaviour, IMatchFinder
         // Kiểm tra Match 4
         if (horizontalMatch.Count >= 4 || verticalMatch.Count >= 4)
         {
-            return SpecialCandyType.StrippedCandy; // Tạo kẹo sọc
+            return SpecialCandyType.StripedCandy; // Tạo kẹo sọc
         }
 
         // Kiểm tra L/T shape
@@ -465,7 +465,7 @@ public class MatchFinder : MonoBehaviour, IMatchFinder
 public enum SpecialCandyType
 {
     None,
-    StrippedCandy, // Kẹo sọc (match 4)
+    StripedCandy, // Kẹo sọc (match 4)
     WrappedCandy,  // Kẹo bọc (L/T shape)
     ColorBomb      // Bom màu (match 5)
 }

@@ -14,5 +14,5 @@ public interface IBoard
     void DestroyCandies(HashSet<GameObject> candiesToDestroy);
     List<Vector2Int> ApplyGravity();
     List<Vector2Int> FillEmptySpots(GameObject[] candyPrefabs);
-
+    bool IsValidPosition(int x, int y);
 }

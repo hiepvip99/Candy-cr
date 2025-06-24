@@ -1,6 +1,8 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
+using UnityEditor.Rendering.LookDev;
+using UnityEngine;
 
 public class FXManager : MonoBehaviour, IFXManager
 {
@@ -9,6 +11,14 @@ public class FXManager : MonoBehaviour, IFXManager
     public float destroyAnimationDuration = 0.15f;
 
     public GameObject explosionFXPrefab; // Kéo thả Particle System prefab vào đây
+    public GameObject lazeHozirontalPerfab; // Kéo thả Particle System prefab vào đây
+
+    private IBoard _board;
+
+    private void Awake()
+    {
+        _board = FindFirstObjectByType<Board>();
+    }
 
     public IEnumerator AnimateSwap(GameObject candy1, GameObject candy2, Vector2 startPos1, Vector2 endPos1)
     {
@@ -54,7 +64,7 @@ public class FXManager : MonoBehaviour, IFXManager
     private IEnumerator AnimateDestroySingleCandy(GameObject candy, float duration)
     {
         if (candy == null) yield break;
-        Vector3 originalScale = candy.transform.localScale;
+        Vector2 originalScale = candy.transform.localScale;
         float timer = 0f;
         while (timer < duration)
         {
@@ -138,12 +148,93 @@ public class FXManager : MonoBehaviour, IFXManager
         // Ví dụ: AudioManager.Instance.PlaySFX("MatchSound");
     }
 
-    public void SpawnExplosionEffect(Vector3 position)
+    public void SpawnExplosionEffect(Vector2Int position, float scale = 1)
     {
         if (explosionFXPrefab != null)
         {
-            GameObject explosion = Instantiate(explosionFXPrefab, position, Quaternion.identity);
+            GameObject explosion = Instantiate(explosionFXPrefab, new Vector3(position.x, position.y, 0), Quaternion.identity);
+            explosion.transform.localScale = Vector3.one * scale; // Thay đổi kích thước nếu cần
             Destroy(explosion, 1f);
         }
+    }
+
+    public IEnumerator PlayDoubleStripedComboFX(Vector2Int center)
+    {
+        bool isHorizontal = true;
+        // Hiệu ứng nổ hàng ngang
+        for (int x = 0; x < _board.Width; x++)
+        {
+            Vector2 worldPos = _board.GetWorldPosition(x, center.y);
+            SpawnLaserEffect(worldPos, isHorizontal);
+        }
+
+        // Hiệu ứng nổ cột dọc
+        for (int y = 0; y < _board.Height; y++)
+        {
+            Vector2 worldPos = _board.GetWorldPosition(center.x, y);
+            SpawnLaserEffect(worldPos, !isHorizontal);
+        }
+
+        yield return new WaitForSeconds(0.3f); // Thời gian hiệu ứng
+    }
+
+    public IEnumerator PlayWrappedCandyFX(Vector2Int center, bool isBigExplosion)
+    {
+        Vector2Int worldPos = _board.GetWorldPosition(center.x, center.y).ConvertTo<Vector2Int>();
+
+        if (isBigExplosion)
+        {
+            // Hiệu ứng vụ nổ lớn
+            SpawnExplosionEffect(worldPos, scale: 2f);
+            //CameraShake.Shake(duration: 0.2f, strength: 0.5f);
+        }
+        else
+        {
+            // Vụ nổ nhỏ thường (khi là kẹo bọc đơn lẻ)
+            SpawnExplosionEffect(worldPos, scale: 1f);
+        }
+
+        yield return new WaitForSeconds(0.3f);
+    }
+
+    public IEnumerator PlayStrippedWrappedComboFX(Vector2Int center)
+    {
+        Vector2 worldCenter = _board.GetWorldPosition(center.x, center.y);
+        bool isHorizontal = true;
+        // Hiệu ứng nổ chữ thập lớn – 3 hàng và 3 cột
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int x = center.x + dx;
+            if (x > 0 && x <= _board.Width )
+            {
+                for (int y = 0; y < _board.Height; y++)
+                {
+                    Vector2 pos = _board.GetWorldPosition(x, y);
+                    SpawnLaserEffect(pos, !isHorizontal);
+                }
+            }
+        }
+
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            int y = center.y + dy;
+            if (y > 0 && y <= _board.Height)
+            {
+                for (int x = 0; x < _board.Width; x++)
+                {
+                    Vector2 pos = _board.GetWorldPosition(x, y);
+                    SpawnLaserEffect(pos, isHorizontal);
+                }
+            }
+        }
+
+        //CameraShake.Shake(duration: 0.25f, strength: 0.6f);
+        yield return new WaitForSeconds(0.4f);
+    }
+
+    void SpawnLaserEffect(Vector2 position, bool isHozirontal)
+    {
+        GameObject lazeEffect = Instantiate(lazeHozirontalPerfab, position, Quaternion.Euler(0, 0, isHozirontal ? 0 : 90));
+        Destroy(lazeEffect, 1f); // Giả sử hiệu ứng sẽ tự hủy sau 1 giây
     }
 }

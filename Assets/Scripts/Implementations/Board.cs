@@ -204,4 +204,8 @@ public class Board : MonoBehaviour, IBoard
         _candies[x1, y1]?.GetComponent<Candy>()?.UpdatePosition(x1, y1);
         _candies[x2, y2]?.GetComponent<Candy>()?.UpdatePosition(x2, y2);
     }
+    public bool IsValidPosition(int x, int y)
+    {
+        return x >= 0 && x < _width && y >= 0 && y < _height;
+    }
 }

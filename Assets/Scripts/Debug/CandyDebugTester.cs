@@ -15,7 +15,7 @@ public class CandyDebugTester : MonoBehaviour
 
     [Header("Debug Settings")]
     [Tooltip("Type of special candy to create on right-click.")]
-    [SerializeField] private SpecialCandyType debugSpecialCandyType = SpecialCandyType.StrippedCandy;
+    [SerializeField] private SpecialCandyType debugSpecialCandyType = SpecialCandyType.StripedCandy;
     [SerializeField] private bool strippedCandyIsHorizontal = true; // Chỉ có tác dụng nếu debugSpecialCandyType là StrippedCandy
 
     private Camera mainCamera;
@@ -103,11 +103,11 @@ public class CandyDebugTester : MonoBehaviour
 
         switch (debugSpecialCandyType)
         {
-            case SpecialCandyType.StrippedCandy:
+            case SpecialCandyType.StripedCandy:
                 angle = strippedCandyIsHorizontal ? 0f : 90f;
                 GameObject strippedPrefab = gameManager.strippedCandyPrefab;
                 newSpecialCandyGO = Instantiate(strippedPrefab, board.GetWorldPosition(candyPos.x, candyPos.y), angle == 0 ? Quaternion.identity : Quaternion.Euler(0f, 0f, angle));
-                StrippedCandy stripped = newSpecialCandyGO.GetComponent<StrippedCandy>();
+                StripedCandy stripped = newSpecialCandyGO.GetComponent<StripedCandy>();
                 if (stripped != null)
                 {
                     stripped.SetDirection(strippedCandyIsHorizontal);

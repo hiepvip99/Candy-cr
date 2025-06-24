@@ -621,7 +621,7 @@ MonoBehaviour:
   gameManager: {fileID: 1770383434}
   board: {fileID: 1572854484}
   fxManager: {fileID: 1256594914}
-  debugSpecialCandyType: 3
+  debugSpecialCandyType: 1
   strippedCandyIsHorizontal: 1
 --- !u!4 &93372639
 Transform:
@@ -2785,6 +2785,7 @@ MonoBehaviour:
   dropDuration: 0.1
   destroyAnimationDuration: 0.15
   explosionFXPrefab: {fileID: 2231518023252525267, guid: f636d7388002c994294f3475deec8844, type: 3}
+  lazeHozirontalPerfab: {fileID: 6371498863741990388, guid: 8ebbe1992829f6a4196f3119e3c483a6, type: 3}
 --- !u!4 &1256594915
 Transform:
   m_ObjectHideFlags: 0

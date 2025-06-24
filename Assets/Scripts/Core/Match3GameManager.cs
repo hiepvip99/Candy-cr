@@ -108,115 +108,144 @@ public class Match3GameManager : MonoBehaviour
         yield return _fxManager.AnimateSwap(candy1GO, candy2GO,
             _board.GetWorldPosition(x1, y1), _board.GetWorldPosition(x2, y2));
 
+        // Xác định loại kẹo đặc biệt
+        bool isStriped1 = (specialCandy1 != null && specialCandy1.SpecialType == SpecialCandyType.StripedCandy);
+        bool isStriped2 = (specialCandy2 != null && specialCandy2.SpecialType == SpecialCandyType.StripedCandy);
+
+        bool isWrapped1 = (specialCandy1 != null && specialCandy1.SpecialType == SpecialCandyType.WrappedCandy);
+        bool isWrapped2 = (specialCandy2 != null && specialCandy2.SpecialType == SpecialCandyType.WrappedCandy);
+
         MatchResult matchResult = new MatchResult(); // Khởi tạo null
 
-        // --- LOGIC XỬ LÝ KẾT HỢP COLOR BOMB ---
-        if (isColorBomb1 || isColorBomb2)
+        if (specialCandy1 != null || specialCandy2 != null)
         {
-            GameObject colorBombGO = isColorBomb1 ? candy1GO : candy2GO;
-            GameObject otherCandyGO = isColorBomb1 ? candy2GO : candy1GO;
-
-            ISpecialCandy otherSpecialCandy = otherCandyGO.GetComponent<ISpecialCandy>();
-            Candy otherRegularCandy = otherCandyGO.GetComponent<Candy>();
-            //Colorbomb + Colorbomb
-            if (otherSpecialCandy != null && otherSpecialCandy.SpecialType == SpecialCandyType.ColorBomb)
+            // --- LOGIC XỬ LÝ KẾT HỢP COLOR BOMB ---
+            if (isColorBomb1 || isColorBomb2)
             {
-                Debug.Log("Color Bomb + Color Bomb: Clearing entire board!");
+                GameObject colorBombGO = isColorBomb1 ? candy1GO : candy2GO;
+                GameObject otherCandyGO = isColorBomb1 ? candy2GO : candy1GO;
 
-                HashSet<GameObject> allCandiesOnBoard = new HashSet<GameObject>();
-                for (int x = 0; x < _board.Width; x++)
+                ISpecialCandy otherSpecialCandy = otherCandyGO.GetComponent<ISpecialCandy>();
+                Candy otherRegularCandy = otherCandyGO.GetComponent<Candy>();
+                //Colorbomb + Colorbomb
+                if (otherSpecialCandy != null && otherSpecialCandy.SpecialType == SpecialCandyType.ColorBomb)
                 {
-                    for (int y = 0; y < _board.Height; y++)
+                    Debug.Log("Color Bomb + Color Bomb: Clearing entire board!");
+
+                    HashSet<GameObject> allCandiesOnBoard = new HashSet<GameObject>();
+                    for (int x = 0; x < _board.Width; x++)
                     {
-                        GameObject candy = _board.GetCandy(x, y);
-                        if (candy != null)
+                        for (int y = 0; y < _board.Height; y++)
                         {
-                            allCandiesOnBoard.Add(candy);
-                        }
-                    }
-                }
-                Debug.Log($"Total candies to destroy: {allCandiesOnBoard.Count}");
-
-                // TRUYỀN DANH SÁCH NÀY TRỰC TIẾP VÀO HÀM
-                // Giả sử bạn có một hàm StartProcessBoardRoutine
-                // yield return StartCoroutine(ProcessBoardRoutine(new MatchResult(), allCandiesOnBoard));
-                // Hoặc nếu bạn gọi trực tiếp trong một Coroutine khác:
-                yield return ProcessBoardRoutine(new MatchResult(), allCandiesOnBoard);
-
-                // Lưu ý: Có thể bạn muốn bỏ qua việc tìm kiếm match thông thường
-                // trong lượt này và chỉ tập trung vào việc xóa bảng.
-                // Việc truyền MatchResult rỗng (new MatchResult()) là hợp lý.
-            }
-            // Color Bomb + Stripped Candy hoặc Wrapped Candy
-            else if (otherSpecialCandy != null &&
-                     (otherSpecialCandy.SpecialType == SpecialCandyType.StrippedCandy ||
-                      otherSpecialCandy.SpecialType == SpecialCandyType.WrappedCandy))
-            {
-                string targetColorTag = otherRegularCandy.tag;
-                SpecialCandyType typeToTransformInto = otherSpecialCandy.SpecialType;
-
-                Debug.Log($"Color Bomb + {typeToTransformInto}: Transforming all {targetColorTag} candies!");
-
-                // Thêm ColorBomb và kẹo đặc biệt kia vào matchResult.MatchedCandies
-                matchResult.MatchedCandies.Add(colorBombGO);
-                matchResult.MatchedCandies.Add(otherCandyGO);
-
-                List<GameObject> candiesToTransform = new List<GameObject>(); // Các kẹo thường sẽ bị thay thế
-                for (int x = 0; x < _board.Width; x++)
-                {
-                    for (int y = 0; y < _board.Height; y++)
-                    {
-                        GameObject candy = _board.GetCandy(x, y);
-                        if (candy != null && candy.CompareTag(targetColorTag))
-                        {
-                            if (candy.GetComponent<ISpecialCandy>() == null) // Chỉ biến đổi kẹo thường
+                            GameObject candy = _board.GetCandy(x, y);
+                            if (candy != null)
                             {
-                                candiesToTransform.Add(candy);
+                                allCandiesOnBoard.Add(candy);
                             }
                         }
                     }
+                    Debug.Log($"Total candies to destroy: {allCandiesOnBoard.Count}");
+
+                    // TRUYỀN DANH SÁCH NÀY TRỰC TIẾP VÀO HÀM
+                    // Giả sử bạn có một hàm StartProcessBoardRoutine
+                    // yield return StartCoroutine(ProcessBoardRoutine(new MatchResult(), allCandiesOnBoard));
+                    // Hoặc nếu bạn gọi trực tiếp trong một Coroutine khác:
+                    yield return ProcessBoardRoutine(new MatchResult(), allCandiesOnBoard);
+
+                    // Lưu ý: Có thể bạn muốn bỏ qua việc tìm kiếm match thông thường
+                    // trong lượt này và chỉ tập trung vào việc xóa bảng.
+                    // Việc truyền MatchResult rỗng (new MatchResult()) là hợp lý.
                 }
-
-                // GỌI HÀM TRANSFORM MỚI (KHÔNG PHẢI COROUTINE)
-                List<GameObject> transformedSpecialCandies = TransformCandies(candiesToTransform, typeToTransformInto);
-
-                // THÊM TẤT CẢ CÁC KẸO ĐẶC BIỆT MỚI TẠO VÀO matchResult.MatchedCandies
-                // Để HandleMatchedSpecialCandyActivations xử lý kích hoạt chúng
-                foreach (GameObject newSpecialCandy in transformedSpecialCandies)
+                // Color Bomb + Stripped Candy hoặc Wrapped Candy
+                else if (otherSpecialCandy != null &&
+                         (otherSpecialCandy.SpecialType == SpecialCandyType.StripedCandy ||
+                          otherSpecialCandy.SpecialType == SpecialCandyType.WrappedCandy))
                 {
-                    matchResult.MatchedCandies.Add(newSpecialCandy);
+                    string targetColorTag = otherRegularCandy.tag;
+                    SpecialCandyType typeToTransformInto = otherSpecialCandy.SpecialType;
+
+                    Debug.Log($"Color Bomb + {typeToTransformInto}: Transforming all {targetColorTag} candies!");
+
+                    // Thêm ColorBomb và kẹo đặc biệt kia vào matchResult.MatchedCandies
+                    matchResult.MatchedCandies.Add(colorBombGO);
+                    matchResult.MatchedCandies.Add(otherCandyGO);
+
+                    List<GameObject> candiesToTransform = new List<GameObject>(); // Các kẹo thường sẽ bị thay thế
+                    for (int x = 0; x < _board.Width; x++)
+                    {
+                        for (int y = 0; y < _board.Height; y++)
+                        {
+                            GameObject candy = _board.GetCandy(x, y);
+                            if (candy != null && candy.CompareTag(targetColorTag))
+                            {
+                                if (candy.GetComponent<ISpecialCandy>() == null) // Chỉ biến đổi kẹo thường
+                                {
+                                    candiesToTransform.Add(candy);
+                                }
+                            }
+                        }
+                    }
+
+                    // GỌI HÀM TRANSFORM MỚI (KHÔNG PHẢI COROUTINE)
+                    List<GameObject> transformedSpecialCandies = TransformCandies(candiesToTransform, typeToTransformInto);
+
+                    // THÊM TẤT CẢ CÁC KẸO ĐẶC BIỆT MỚI TẠO VÀO matchResult.MatchedCandies
+                    // Để HandleMatchedSpecialCandyActivations xử lý kích hoạt chúng
+                    foreach (GameObject newSpecialCandy in transformedSpecialCandies)
+                    {
+                        matchResult.MatchedCandies.Add(newSpecialCandy);
+                    }
                 }
+                // Color Bomb + Kẹo thường
+                else if (otherRegularCandy != null)
+                {
+                    Debug.Log($"Color Bomb + Regular Candy ({otherRegularCandy.tag}): Clearing all {otherRegularCandy.tag} candies.");
+                    //matchResult = new MatchResult();
+                    matchResult.MatchedCandies.Add(colorBombGO);
+                    matchResult.MatchedCandies.Add(otherCandyGO); // Kẹo thường cũng được coi là match để kích hoạt ColorBomb
+
+                    // Color Bomb sẽ tự xử lý việc tìm kẹo cùng màu thông qua targetTag trong Activate() của nó
+                    // Chúng ta chỉ cần đảm bảo nó được kích hoạt.
+                    // Thêm ColorBomb vào danh sách kích hoạt
+                    _specialCandiesActivatedThisCascade.Add(colorBombGO);
+
+                    // Báo cáo để ColorBomb tự Activate với targetTag là màu của kẹo thường
+                    // Chúng ta sẽ cần một cách để truyền targetTag này tới ProcessBoardRoutine.
+                    // Tạm thời, để nó chạy qua HandleMatchedSpecialCandyActivations.
+                    // HandleMatchedSpecialCandyActivations sẽ tìm targetTag.
+                }
+                else
+                {
+                    Debug.LogWarning("Color Bomb swapped with an unexpected object or null.");
+                    IsProcessingBoard = false;
+                    yield break;
+                }
+
+                // Sau khi Color Bomb được hoán đổi, luôn xử lý bảng
+                // currentMatchResult.MatchedCandies sẽ bao gồm Color Bomb và kẹo kia
+                yield return StartCoroutine(ProcessBoardRoutine(matchResult));
             }
-            // Color Bomb + Kẹo thường
-            else if (otherRegularCandy != null)
+            // --- KẾT THÚC LOGIC XỬ LÝ KẾT HỢP COLOR BOMB ---
+
+            // 1. Sọc + Sọc
+            // HashSet để lưu trữ tất cả các kẹo bị ảnh hưởng bởi combo
+            HashSet<GameObject> candiesToDestroyByCombo = new HashSet<GameObject>();
+            if (isStriped1 && isStriped2)
             {
-                Debug.Log($"Color Bomb + Regular Candy ({otherRegularCandy.tag}): Clearing all {otherRegularCandy.tag} candies.");
-                //matchResult = new MatchResult();
-                matchResult.MatchedCandies.Add(colorBombGO);
-                matchResult.MatchedCandies.Add(otherCandyGO); // Kẹo thường cũng được coi là match để kích hoạt ColorBomb
-
-                // Color Bomb sẽ tự xử lý việc tìm kẹo cùng màu thông qua targetTag trong Activate() của nó
-                // Chúng ta chỉ cần đảm bảo nó được kích hoạt.
-                // Thêm ColorBomb vào danh sách kích hoạt
-                _specialCandiesActivatedThisCascade.Add(colorBombGO);
-
-                // Báo cáo để ColorBomb tự Activate với targetTag là màu của kẹo thường
-                // Chúng ta sẽ cần một cách để truyền targetTag này tới ProcessBoardRoutine.
-                // Tạm thời, để nó chạy qua HandleMatchedSpecialCandyActivations.
-                // HandleMatchedSpecialCandyActivations sẽ tìm targetTag.
+                yield return StartCoroutine(ActivateDoubleStrippedCombo(candy1GO, candy2GO));
             }
-            else
+            // 2. Bọc + Bọc
+            else if (isWrapped1 && isWrapped2)
             {
-                Debug.LogWarning("Color Bomb swapped with an unexpected object or null.");
-                IsProcessingBoard = false;
-                yield break;
+                yield return StartCoroutine(ActivateDoubleWrappedCombo(candy1GO, candy2GO));
+            }
+            // 3. Sọc + Bọc
+            else if ((isStriped1 && isWrapped2) || (isWrapped1 && isStriped2))
+            {
+                yield return StartCoroutine(ActivateStripedWrappedCombo(candy1GO, candy2GO));
             }
 
-            // Sau khi Color Bomb được hoán đổi, luôn xử lý bảng
-            // currentMatchResult.MatchedCandies sẽ bao gồm Color Bomb và kẹo kia
-            yield return StartCoroutine(ProcessBoardRoutine(matchResult));
         }
-        // --- KẾT THÚC LOGIC XỬ LÝ KẾT HỢP COLOR BOMB ---
         else // Không có Color Bomb được hoán đổi, xử lý match thông thường
         {
             matchResult = _matchFinder.FindAllMatches(_board.Candies, _board.Width, _board.Height, new Vector2Int(x2, y2));
@@ -260,7 +289,7 @@ public class Match3GameManager : MonoBehaviour
             ISpecialCandy newSpecialCandyScript = null;
             float angle = 0f; // Khởi tạo góc
 
-            if (typeToTransformInto == SpecialCandyType.StrippedCandy)
+            if (typeToTransformInto == SpecialCandyType.StripedCandy)
             {
                 // --- ĐOẠN CODE KHÔI PHỤC RANDOM HƯỚNG ---
                 bool strippedCandyIsHorizontal = Random.Range(0, 2) == 0; // 0 = ngang, 1 = dọc
@@ -268,7 +297,7 @@ public class Match3GameManager : MonoBehaviour
                                                               // ----------------------------------------
 
                 newSpecialCandyGO = Instantiate(strippedCandyPrefab, _board.GetWorldPosition(pos.x, pos.y), Quaternion.Euler(0f, 0f, angle));
-                StrippedCandy stripped = newSpecialCandyGO?.GetComponent<StrippedCandy>(); // Sử dụng ?. để an toàn
+                StripedCandy stripped = newSpecialCandyGO?.GetComponent<StripedCandy>(); // Sử dụng ?. để an toàn
                 if (stripped != null)
                 {
                     stripped.SetDirection(strippedCandyIsHorizontal);
@@ -276,7 +305,7 @@ public class Match3GameManager : MonoBehaviour
                     stripped.tag = originalColorTag;
                     newSpecialCandyScript = stripped;
                 }
-                else { Debug.LogWarning("StrippedCandy component not found on the new special candy prefab!"); }
+                else { Debug.LogWarning("StripedCandy component not found on the new special candy prefab!"); }
             }
             else if (typeToTransformInto == SpecialCandyType.WrappedCandy)
             {
@@ -455,7 +484,7 @@ public class Match3GameManager : MonoBehaviour
 
             switch (creationInfo.Type)
             {
-                case SpecialCandyType.StrippedCandy:
+                case SpecialCandyType.StripedCandy:
                     specialCandyPrefabToUse = strippedCandyPrefab;
                     angle = creationInfo.IsHorizontalStripped ? 0f : 90f;
                     newCandyGameObjectTag = creationInfo.BaseCandyTag; // Sử dụng tag gốc đã lưu
@@ -498,7 +527,7 @@ public class Match3GameManager : MonoBehaviour
                 _board.SetCandy(pos.x, pos.y, newSpecialCandy);
                 newSpecialCandy.GetComponent<Candy>()?.Init(pos.x, pos.y);
 
-                StrippedCandy strippedCandyScript = newSpecialCandy.GetComponent<StrippedCandy>();
+                StripedCandy strippedCandyScript = newSpecialCandy.GetComponent<StripedCandy>();
                 if (strippedCandyScript != null)
                 {
                     strippedCandyScript.SetDirection(creationInfo.IsHorizontalStripped);
@@ -621,5 +650,119 @@ public class Match3GameManager : MonoBehaviour
             Debug.Log("ForceProcessBoard: Board is already processing.");
         }
     }
+
+    private IEnumerator ActivateDoubleStrippedCombo(GameObject striped1, GameObject striped2)
+    {
+        Vector2Int pos1 = striped1.GetComponent<Candy>().Position;
+        Vector2Int pos2 = striped2.GetComponent<Candy>().Position;
+        Vector2Int center = pos1;
+
+        HashSet<GameObject> affected = new HashSet<GameObject>();
+
+        // Nổ hàng
+        for (int x = 0; x < _board.Width; x++)
+        {
+            GameObject c = _board.GetCandy(x, center.y);
+            if (c != null) affected.Add(c);
+        }
+
+        // Nổ cột
+        for (int y = 0; y < _board.Height; y++)
+        {
+            GameObject c = _board.GetCandy(center.x, y);
+            if (c != null) affected.Add(c);
+        }
+
+        GameEvents.ReportSpecialCandyActivation(center, SpecialCandyType.StripedCandy, affected, "DoubleStriped");
+        yield return _fxManager.PlayDoubleStripedComboFX(center);
+        yield return new WaitForSeconds(0.2f);
+    }
+
+    private IEnumerator ActivateDoubleWrappedCombo(GameObject wrapped1, GameObject wrapped2)
+    {
+        Vector2Int center1 = wrapped1.GetComponent<Candy>().Position;
+        Vector2Int center2 = wrapped2.GetComponent<Candy>().Position;
+
+        // Vụ nổ 1
+        HashSet<GameObject> affected1 = new HashSet<GameObject>();
+        for (int dx = -2; dx <= 2; dx++)
+        {
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                int x = center1.x + dx;
+                int y = center1.y + dy;
+                if (_board.IsValidPosition(x, y))
+                {
+                    GameObject c = _board.GetCandy(x, y);
+                    if (c != null) affected1.Add(c);
+                }
+            }
+        }
+        GameEvents.ReportSpecialCandyActivation(center1, SpecialCandyType.WrappedCandy, affected1, "DoubleWrapped");
+        yield return _fxManager.PlayWrappedCandyFX(center1, isBigExplosion: true);
+        yield return new WaitForSeconds(0.2f);
+
+        // Vụ nổ 2
+        HashSet<GameObject> affected2 = new HashSet<GameObject>();
+        for (int dx = -2; dx <= 2; dx++)
+        {
+            for (int dy = -2; dy <= 2; dy++)
+            {
+                int x = center2.x + dx;
+                int y = center2.y + dy;
+                if (_board.IsValidPosition(x, y))
+                {
+                    GameObject c = _board.GetCandy(x, y);
+                    if (c != null) affected2.Add(c);
+                }
+            }
+        }
+        GameEvents.ReportSpecialCandyActivation(center2, SpecialCandyType.WrappedCandy, affected2, "DoubleWrapped");
+        yield return _fxManager.PlayWrappedCandyFX(center2, isBigExplosion: true);
+        yield return new WaitForSeconds(0.2f);
+    }
+
+    private IEnumerator ActivateStripedWrappedCombo(GameObject wrapped, GameObject striped)
+    {
+        Vector2Int centerWrapped = wrapped.GetComponent<Candy>().Position;
+        Vector2Int centerStriped = striped.GetComponent<Candy>().Position;
+
+        // Dùng tâm chính là viên Wrapped
+        Vector2Int center = centerWrapped;
+
+        HashSet<GameObject> affected = new HashSet<GameObject>();
+
+        // Nổ 3 cột: x-1, x, x+1
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int x = center.x + dx;
+            if (x < 0 || x >= _board.Width) continue;
+
+            for (int y = 0; y < _board.Height; y++)
+            {
+                GameObject c = _board.GetCandy(x, y);
+                if (c != null) affected.Add(c);
+            }
+        }
+
+        // Nổ 3 hàng: y-1, y, y+1
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            int y = center.y + dy;
+            if (y < 0 || y >= _board.Height) continue;
+
+            for (int x = 0; x < _board.Width; x++)
+            {
+                GameObject c = _board.GetCandy(x, y);
+                if (c != null) affected.Add(c);
+            }
+        }
+
+        GameEvents.ReportSpecialCandyActivation(center, SpecialCandyType.StripedCandy, affected, "Wrapped+Striped");
+        yield return _fxManager.PlayStrippedWrappedComboFX(center);
+        yield return new WaitForSeconds(0.2f);
+    }
+
+
 }
 

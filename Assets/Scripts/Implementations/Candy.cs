@@ -5,8 +5,7 @@ public class Candy : MonoBehaviour
     public int X { get; private set; }
     public int Y { get; private set; }
     //public string TypeTag { get; private set; }
-
-    // Thêm một thuộc tính để dễ dàng truy cập tag của GameObject
+    public Vector2Int Position => new Vector2Int(X, Y);
 
     public void Init(int x, int y)
     {
