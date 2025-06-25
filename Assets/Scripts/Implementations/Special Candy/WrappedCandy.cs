@@ -107,6 +107,7 @@ using System.Collections.Generic;
 
 public class WrappedCandy : Candy, ISpecialCandy
 {
+    public bool IsPendingBigExplosion { get; set; } = false;
     public SpecialCandyType SpecialType => SpecialCandyType.WrappedCandy;
 
     public IEnumerator Activate(IBoard board, IFXManager fxManager, string targetTag = null)

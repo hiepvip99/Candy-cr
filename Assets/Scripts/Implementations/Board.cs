@@ -131,6 +131,7 @@ public class Board : MonoBehaviour, IBoard
                     int y = candyScript.Y;
                     if (x >= 0 && x < _width && y >= 0 && y < _height && _candies[x, y] == candyGO)
                     {
+                        Debug.Log($"[Board] Destroying candy at ({candyScript.X}, {candyScript.Y})");
                         // Hủy Kẹo Kera và đặt null trong mảng _candies
                         Destroy(candyGO);
                         _candies[x, y] = null;

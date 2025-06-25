@@ -9,7 +9,7 @@ public interface IFXManager
     IEnumerator AnimateDropCandies(List<Vector2Int> droppedPositions, IBoard board);
     IEnumerator AnimateNewCandiesDrop(List<Vector2Int> newCandyPositions, IBoard board);
     void PlayMatchSound();
-    void SpawnExplosionEffect(Vector2Int position, float scale = 1f);
+    void SpawnExplosionEffect(Vector2 position, float scale = 1f);
     IEnumerator PlayDoubleStripedComboFX(Vector2Int position);
     IEnumerator PlayStrippedWrappedComboFX(Vector2Int position);
     IEnumerator PlayWrappedCandyFX(Vector2Int position, bool isBigExplosion);

@@ -148,7 +148,7 @@ public class FXManager : MonoBehaviour, IFXManager
         // Ví dụ: AudioManager.Instance.PlaySFX("MatchSound");
     }
 
-    public void SpawnExplosionEffect(Vector2Int position, float scale = 1)
+    public void SpawnExplosionEffect(Vector2 position, float scale = 1)
     {
         if (explosionFXPrefab != null)
         {
@@ -180,7 +180,7 @@ public class FXManager : MonoBehaviour, IFXManager
 
     public IEnumerator PlayWrappedCandyFX(Vector2Int center, bool isBigExplosion)
     {
-        Vector2Int worldPos = _board.GetWorldPosition(center.x, center.y).ConvertTo<Vector2Int>();
+        Vector2 worldPos = _board.GetWorldPosition(center.x, center.y);
 
         if (isBigExplosion)
         {
