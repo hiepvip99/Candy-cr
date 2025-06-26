@@ -32,7 +32,7 @@ public class Match3GameManager : MonoBehaviour
 
     // Các biến nội bộ để quản lý trạng thái game
     // Thay đổi kiểu của list này từ Vector2Int sang GameObject
-    private List<GameObject> _wrappedCandiesPendingSecondExplosion = new List<GameObject>();
+    private HashSet<GameObject> _wrappedCandiesPendingSecondExplosion = new HashSet<GameObject>();
     private HashSet<GameObject> _allCandiesToDestroyThisTurn = new HashSet<GameObject>();
     private Dictionary<Vector2Int, SpecialCandyCreationInfo> _specialCandiesToCreateThisTurn =
         new Dictionary<Vector2Int, SpecialCandyCreationInfo>();
@@ -839,7 +839,7 @@ public class Match3GameManager : MonoBehaviour
     // Cập nhật hàm lắng nghe event để chấp nhận GameObject
     private void AddWrappedCandyForSecondExplosion(GameObject wrappedCandyGo)
     {
-        if (wrappedCandyGo != null && !_wrappedCandiesPendingSecondExplosion.Contains(wrappedCandyGo))
+        if (wrappedCandyGo != null)
         {
             _wrappedCandiesPendingSecondExplosion.Add(wrappedCandyGo);
         }
